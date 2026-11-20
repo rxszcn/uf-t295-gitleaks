@@ -18,7 +18,9 @@ func (r *JunitReporter) Write(w io.WriteCloser, findings []Finding) error {
 		TestSuites: getTestSuites(findings),
 	}
 
-	io.WriteString(w, xml.Header)
+	if _, err := io.WriteString(w, xml.Header); err != nil {
+		return err
+	}
 	encoder := xml.NewEncoder(w)
 	encoder.Indent("", "\t")
 	return encoder.Encode(testSuites)

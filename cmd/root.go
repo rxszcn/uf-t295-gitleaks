@@ -385,8 +385,14 @@ func Detector(cmd *cobra.Command, cfg config.Config, source string) *detect.Dete
 		case "junit":
 			reporter = &report.JunitReporter{}
 		case "sarif":
+			// The sarif rule catalog must declare exactly the rules that took part
+			// in the scan. |detector.Config| is the effective config after
+			// --enable-rule narrowing, and GetOrderedRules filters the ordered ids
+			// against that effective rule map, so the catalog and the results are
+			// assembled from the same source. Using |cfg| here would over-declare
+			// rules that never participated in the scan.
 			reporter = &report.SarifReporter{
-				OrderedRules: cfg.GetOrderedRules(),
+				OrderedRules: detector.Config.GetOrderedRules(),
 			}
 		case "template":
 			if reporter, err = report.NewTemplateReporter(reportTemplate); err != nil {

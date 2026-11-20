@@ -570,6 +570,13 @@ are supported.
 
 Gitleaks has built-in support for several report formats: [`json`](https://github.com/gitleaks/gitleaks/blob/master/testdata/expected/report/json_simple.json), [`csv`](https://github.com/gitleaks/gitleaks/blob/master/testdata/expected/report/csv_simple.csv?plain=1), [`junit`](https://github.com/gitleaks/gitleaks/blob/master/testdata/expected/report/junit_simple.xml), and [`sarif`](https://github.com/gitleaks/gitleaks/blob/master/testdata/expected/report/sarif_simple.sarif).
 
+All four formats are produced by the same write layer and follow one write contract:
+
+- **Column sets are batch-level, not row-level.** The `csv` column set is resolved over the whole finding batch. The `Link` column is present as soon as any finding carries a link, and every row then carries a `Link` cell (empty for findings without one). Whether a column is dropped never depends on the first finding.
+- **Zero findings keep their per-format empty shapes.** With no findings, `csv` is a zero-byte file (no header), `json` is `[]`, `junit` is an empty `testsuites` document, and `sarif` declares the rule catalog with an empty `results` array. These shapes are stable and safe to parse.
+- **The `sarif` rule catalog declares exactly the rules that took part in the scan.** Rules excluded via `--enable-rule` or disabled in the config are not declared, so the catalog and the results are assembled from the same effective rule set.
+- **Write failures are surfaced, not cleaned up.** If writing an artifact fails midway, the error is reported and whatever bytes the sink already accepted remain in the file. Treat a failed report as unusable rather than trusting a partial artifact.
+
 If none of these formats fit your need, you can create your own report format with a [Go `text/template` .tmpl file](https://www.digitalocean.com/community/tutorials/how-to-use-templates-in-go#step-4-writing-a-template) and the `--report-template` flag. The template can use [extended functionality from the `Masterminds/sprig` template library](https://masterminds.github.io/sprig/).
 
 For example, the following template provides a custom JSON output:
